@@ -67,7 +67,6 @@ class TasksController < ApplicationController
 
   def push_task_updates
     if task_status_changed?
-      notifiee = task.readers(false) - [current_user]
       if notifiee
         mail_completion_notice(notifiee) if new_status == Status::COMPLETED
         mail_uncomplete_notice(notifiee) if previous_status == Status::COMPLETED
@@ -95,5 +94,9 @@ class TasksController < ApplicationController
 
   def task_status_changed?
     previous_status != @task.status
+  end
+
+  def notifiee
+    @notifiee ||= task.readers(false) - [current_user]
   end
 end
