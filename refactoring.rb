@@ -68,8 +68,8 @@ class TasksController < ApplicationController
   def push_task_updates
     if task_status_changed?
       if notifiee
-        mail_completion_notice(notifiee) if new_status == Status::COMPLETED
-        mail_uncomplete_notice(notifiee) if previous_status == Status::COMPLETED
+        mail_completion_notice(notifiee) if task_newly_completed?
+        mail_uncomplete_notice(notifiee) if task_previously_completed?
       end
     end
     if old_project_id != (@task.project && @task.project.id)
@@ -93,7 +93,18 @@ class TasksController < ApplicationController
   end
 
   def task_status_changed?
+    # Can't see where previous_status is defined. Only assuming for now it's available locally
     previous_status != @task.status
+  end
+
+  def task_newly_completed?
+    # Can't see where new_status is defined. Only assuming for now it's available locally
+    new_status == Status::COMPLETED
+  end
+
+  def task_previously_completed?
+    # Can't see where previous_status is defined. Only assuming for now it's available locally
+    previous_status == Status::COMPLETED
   end
 
   def notifiee
