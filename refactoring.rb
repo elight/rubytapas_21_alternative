@@ -16,8 +16,7 @@ class ClientProxy
     push_task_project_updates
 
     if @task.project
-      # I'm unclear as to the behavior of push_task.
-      # I'm also unclear why the present of @task.project implies Task was updated.
+      # I'm unclear why the present of @task.project implies Task was updated.
       # This seems to imply that a newly minted task does not already have a Project...
       push_task('update_task')
     else
