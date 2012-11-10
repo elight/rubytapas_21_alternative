@@ -4,10 +4,8 @@ class TasksController < ApplicationController
     @previous_status = @task.status
 
     if @task.update_attributes(params[:task])
-      send_task_change_notifications
       push_task_updates
-
-      notify_assignees_of_task_responsibility_changes
+      send_emails_about_task_changes
 
       #respond_with defaults to a blank response, we need the object sent back so that the id can be read
       respond_to do |format|
@@ -35,6 +33,11 @@ class TasksController < ApplicationController
       push_task('delete_task', previous_assignee) if previous_assignee
       push_task('update_task', update_users)
     end
+  end
+
+  def send_emails_about_task_changes
+    send_task_change_notifications
+    notify_assignees_of_task_responsibility_changes
   end
 
   def send_task_change_notifications
