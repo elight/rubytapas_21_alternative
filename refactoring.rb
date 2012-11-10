@@ -39,8 +39,6 @@ class ClientProxy
     # definition would occur here
   end
 
-  private
-
   def task_project_id_changed?
     old_project_id != (task.project && task.project.id)
   end
