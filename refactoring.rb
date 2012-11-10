@@ -1,8 +1,8 @@
 class TasksController < ApplicationController
   def update
     @old_project_id = @task.project && @task.project.id
+    @previous_status = @task.status
 
-    previous_status = @task.status
     if @task.update_attributes(params[:task])
       send_task_change_notifications
       push_task_updates
@@ -57,8 +57,7 @@ class TasksController < ApplicationController
   end
 
   def task_status_changed?
-    # Can't see where previous_status is defined. Only assuming for now it's available locally
-    previous_status != @task.status
+    @previous_status != @task.status
   end
 
   def task_newly_completed?
@@ -67,8 +66,7 @@ class TasksController < ApplicationController
   end
 
   def task_previously_completed?
-    # Can't see where previous_status is defined. Only assuming for now it's available locally
-    previous_status == Status::COMPLETED
+    @previous_status == Status::COMPLETED
   end
 
   def notifiee
