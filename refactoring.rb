@@ -1,6 +1,7 @@
 class ClientProxy
   attr_reader :task, :old_project_id
 
+  # Virtus could be handy to constrain what instance variables can be set
   def initialize(params = {})
     params.each do |k, v|
       instance_variable_set(k, v)
@@ -12,7 +13,7 @@ class ClientProxy
   end
 
   def push_task_updates
-    push_project_updates
+    push_task_project_updates
 
     if @task.project
       # I'm unclear as to the behavior of push_task.
@@ -26,13 +27,18 @@ class ClientProxy
     end
   end
 
-  def push_project_updates
+  private
+
+  def push_task_project_updates
     return unless task_project_id_changed?
 
     push_project_update(old_project_id)
     push_project_update(task.project.id) if task.project
   end
 
+  def push_task
+    # definition would occur here
+  end
 
   private
 
@@ -41,14 +47,66 @@ class ClientProxy
   end
 end
 
+class EmailNotifier
+  attr_reader :task, :previous_task_status
+
+  # Virtus could be handy to constrain what instance variables can be set
+  def initialize(params = {})
+    params.each do |k, v|
+      instance_variable_set(k, v)
+    end
+  end
+
+  def send_task_updates
+    send_task_changes
+    send_task_assignment_changes
+  end
+
+  private
+
+  def send_task_changes
+    if task_status_changed? && notifiee
+      mail_completion_notice(notifiee) if task_newly_completed?
+      mail_uncomplete_notice(notifiee) if task_previously_completed?
+    end
+  end
+
+  def send_task_assignment_changes
+    mail_assignment if assignee
+    mail_assignment_removal(previous_assignee) if previous_assignee
+  end
+
+  def task_status_changed?
+    previous_task_status != task.status
+  end
+
+  def task_newly_completed?
+    task.status == Status::COMPLETED
+  end
+
+  def task_previously_completed?
+    previous_task_status == Status::COMPLETED
+  end
+
+  def notifiee
+    @notifiee ||= task.readers(false) - [current_user]
+  end
+
+  def update_users
+    task.readers - [assignee] if assignee
+  end
+end
+
 class TasksController < ApplicationController
   def update
-    @old_project_id = @task.project && @task.project.id
-    @previous_status = @task.status
+    previous_task_status = @task.status
 
     if @task.update_attributes(params[:task])
-      ClientProxy.new(params, :task => @task).push_task_updates
-      send_emails_about_task_changes
+      ClientProxy.new(:task => @task).push_task_updates
+      EmailNotifier.new(
+        :task => @task,
+        :previous_task_status => previous_task_status
+      ).send_task_updates
 
       #respond_with defaults to a blank response, we need the object sent back so that the id can be read
       respond_to do |format|
@@ -59,45 +117,5 @@ class TasksController < ApplicationController
         format.json {render @task.errors.messages, status: :unprocessable_entity}
       end
     end
-  end
-
-  protected
-
-  def send_emails_about_task_changes
-    send_task_change_notifications
-    notify_assignees_of_task_responsibility_changes
-  end
-
-  def send_task_change_notifications
-    if task_status_changed? && notifiee
-      mail_completion_notice(notifiee) if task_newly_completed?
-      mail_uncomplete_notice(notifiee) if task_previously_completed?
-    end
-  end
-
-  def notify_assignees_of_task_responsibility_changes
-    mail_assignment if assignee
-    mail_assignment_removal(previous_assignee) if previous_assignee
-  end
-
-  def task_status_changed?
-    @previous_status != @task.status
-  end
-
-  def task_newly_completed?
-    # Can't see where new_status is defined. Only assuming for now it's available locally
-    new_status == Status::COMPLETED
-  end
-
-  def task_previously_completed?
-    @previous_status == Status::COMPLETED
-  end
-
-  def notifiee
-    @notifiee ||= task.readers(false) - [current_user]
-  end
-
-  def update_users
-    @task.readers - [assignee] if assignee
   end
 end
