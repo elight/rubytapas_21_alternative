@@ -66,7 +66,7 @@ class TasksController < ApplicationController
   protected
 
   def push_task_updates
-    if previous_status != @task.status
+    if task_status_changed?
       notifiee = task.readers(false) - [current_user]
       if notifiee
         mail_completion_notice(notifiee) if new_status == Status::COMPLETED
@@ -91,5 +91,9 @@ class TasksController < ApplicationController
     mail_assignment_removal(previous_assignee) if previous_assignee
 
     #respond_with defaults to a blank response, we need the object sent back so that the id can be read
+  end
+
+  def task_status_changed?
+    previous_status != @task.status
   end
 end
