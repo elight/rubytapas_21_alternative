@@ -4,7 +4,7 @@ class ClientProxy
   # Virtus could be handy to constrain what instance variables can be set
   def initialize(params = {})
     params.each do |k, v|
-      instance_variable_set(k, v)
+      instance_variable_set("@#{k}", v)
     end
 
     if task
@@ -50,7 +50,7 @@ class EmailNotifier
   # Virtus could be handy to constrain what instance variables can be set
   def initialize(params = {})
     params.each do |k, v|
-      instance_variable_set(k, v)
+      instance_variable_set("@#{k}", v)
     end
   end
 
