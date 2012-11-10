@@ -7,6 +7,8 @@ class TasksController < ApplicationController
       send_task_change_notifications
       push_task_updates
 
+      notify_assignees_of_task_responsibility_changes
+
       #respond_with defaults to a blank response, we need the object sent back so that the id can be read
       respond_to do |format|
         format.json {render 'show', status: :accepted}
@@ -33,9 +35,6 @@ class TasksController < ApplicationController
       push_task('delete_task', previous_assignee) if previous_assignee
       push_task('update_task', update_users)
     end
-
-    mail_assignment if assignee
-    mail_assignment_removal(previous_assignee) if previous_assignee
   end
 
   def send_task_change_notifications
@@ -43,6 +42,11 @@ class TasksController < ApplicationController
       mail_completion_notice(notifiee) if task_newly_completed?
       mail_uncomplete_notice(notifiee) if task_previously_completed?
     end
+  end
+
+  def notify_assignees_of_task_responsibility_changes
+    mail_assignment if assignee
+    mail_assignment_removal(previous_assignee) if previous_assignee
   end
 
   def push_project_updates
