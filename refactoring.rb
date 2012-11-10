@@ -67,10 +67,7 @@ class TasksController < ApplicationController
 
   def push_task_updates
     if task_status_changed?
-      if notifiee
-        mail_completion_notice(notifiee) if task_newly_completed?
-        mail_uncomplete_notice(notifiee) if task_previously_completed?
-      end
+      send_task_change_notifications
     end
     if old_project_id != (@task.project && @task.project.id)
       push_project_update(old_project_id)
@@ -90,6 +87,13 @@ class TasksController < ApplicationController
     mail_assignment_removal(previous_assignee) if previous_assignee
 
     #respond_with defaults to a blank response, we need the object sent back so that the id can be read
+  end
+
+  def send_task_change_notifications
+    if notifiee
+      mail_completion_notice(notifiee) if task_newly_completed?
+      mail_uncomplete_notice(notifiee) if task_previously_completed?
+    end
   end
 
   def task_status_changed?
