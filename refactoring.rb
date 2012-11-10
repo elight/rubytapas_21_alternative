@@ -52,6 +52,7 @@ class TasksController < ApplicationController
 
     previous_status = @task.status
     if @task.update_attributes(params[:task])
+      send_task_change_notifications
       push_task_updates
       respond_to do |format|
         format.json {render 'show', status: :accepted}
@@ -66,12 +67,12 @@ class TasksController < ApplicationController
   protected
 
   def push_task_updates
-    send_task_change_notifications
-    if task_project_id_changed_from?(old_project_id)
-      push_project_update(old_project_id)
-      push_project_update(@task.project.id) if @task.project
-    end
+    push_project_updates
+
     if @task.project
+      # I'm unclear as to the behavior of push_task.
+      # I'm also unclear why the present of @task.project implies Task was updated.
+      # This seems to imply that a newly minted task does not already have a Project...
       push_task('update_task')
     else
       push_task('create_task', assignee) if assignee
@@ -94,8 +95,15 @@ class TasksController < ApplicationController
     end
   end
 
-  def task_project_id_changed_from?(old_project_id)
-    old_project_id != (@task.project && @task.project.id)
+  def push_project_updates
+    return unless task_project_id_changed?
+
+    push_project_update(@old_project_id)
+    push_project_update(@task.project.id) if @task.project
+  end
+
+  def task_project_id_changed?
+    @old_project_id != (@task.project && @task.project.id)
   end
 
   def task_status_changed?
