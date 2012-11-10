@@ -29,8 +29,6 @@ class TasksController < ApplicationController
     else
       push_task('create_task', assignee) if assignee
       push_task('delete_task', previous_assignee) if previous_assignee
-      update_users = @task.readers
-      update_users = update_users - [assignee] if assignee
       push_task('update_task', update_users)
     end
 
@@ -75,5 +73,9 @@ class TasksController < ApplicationController
 
   def notifiee
     @notifiee ||= task.readers(false) - [current_user]
+  end
+
+  def update_users
+    @task.readers - [assignee] if assignee
   end
 end
