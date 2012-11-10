@@ -6,6 +6,8 @@ class TasksController < ApplicationController
     if @task.update_attributes(params[:task])
       send_task_change_notifications
       push_task_updates
+
+      #respond_with defaults to a blank response, we need the object sent back so that the id can be read
       respond_to do |format|
         format.json {render 'show', status: :accepted}
       end
@@ -34,8 +36,6 @@ class TasksController < ApplicationController
 
     mail_assignment if assignee
     mail_assignment_removal(previous_assignee) if previous_assignee
-
-    #respond_with defaults to a blank response, we need the object sent back so that the id can be read
   end
 
   def send_task_change_notifications
