@@ -66,10 +66,8 @@ class TasksController < ApplicationController
   protected
 
   def push_task_updates
-    if task_status_changed?
-      send_task_change_notifications
-    end
-    if old_project_id != (@task.project && @task.project.id)
+    send_task_change_notifications
+    if task_project_id_changed_from?(old_project_id)
       push_project_update(old_project_id)
       push_project_update(@task.project.id) if @task.project
     end
@@ -90,10 +88,14 @@ class TasksController < ApplicationController
   end
 
   def send_task_change_notifications
-    if notifiee
+    if task_status_changed? && notifiee
       mail_completion_notice(notifiee) if task_newly_completed?
       mail_uncomplete_notice(notifiee) if task_previously_completed?
     end
+  end
+
+  def task_project_id_changed_from?(old_project_id)
+    old_project_id != (@task.project && @task.project.id)
   end
 
   def task_status_changed?
