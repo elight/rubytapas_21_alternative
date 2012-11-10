@@ -52,7 +52,7 @@ class TasksController < ApplicationController
 
     previous_status = @task.status
     if @task.update_attributes(params[:task])
-      task_was_updated
+      push_task_updates
       respond_to do |format|
         format.json {render 'show', status: :accepted}
       end
@@ -65,7 +65,7 @@ class TasksController < ApplicationController
 
   protected
 
-  def task_was_updated
+  def push_task_updates
     if previous_status != @task.status
       notifiee = task.readers(false) - [current_user]
       if notifiee
