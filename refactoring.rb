@@ -1,6 +1,6 @@
 class TasksController < ApplicationController
   def update
-    old_project_id = @task.project && @task.project.id
+    @old_project_id = @task.project && @task.project.id
 
     previous_status = @task.status
     if @task.update_attributes(params[:task])
