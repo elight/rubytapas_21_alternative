@@ -1,24 +1,15 @@
-class TasksController < ApplicationController
-  def update
-    @old_project_id = @task.project && @task.project.id
-    @previous_status = @task.status
+class ClientProxy
+  attr_reader :task, :old_project_id
 
-    if @task.update_attributes(params[:task])
-      push_task_updates
-      send_emails_about_task_changes
+  def initialize(params = {})
+    params.each do |k, v|
+      instance_variable_set(k, v)
+    end
 
-      #respond_with defaults to a blank response, we need the object sent back so that the id can be read
-      respond_to do |format|
-        format.json {render 'show', status: :accepted}
-      end
-    else
-      respond_with @task do |format|
-        format.json {render @task.errors.messages, status: :unprocessable_entity}
-      end
+    if task
+      @old_project_id = task.project && task.project.id
     end
   end
-
-  protected
 
   def push_task_updates
     push_project_updates
@@ -35,6 +26,43 @@ class TasksController < ApplicationController
     end
   end
 
+  def push_project_updates
+    return unless task_project_id_changed?
+
+    push_project_update(old_project_id)
+    push_project_update(task.project.id) if task.project
+  end
+
+
+  private
+
+  def task_project_id_changed?
+    old_project_id != (task.project && task.project.id)
+  end
+end
+
+class TasksController < ApplicationController
+  def update
+    @old_project_id = @task.project && @task.project.id
+    @previous_status = @task.status
+
+    if @task.update_attributes(params[:task])
+      ClientProxy.new(params, :task => @task).push_task_updates
+      send_emails_about_task_changes
+
+      #respond_with defaults to a blank response, we need the object sent back so that the id can be read
+      respond_to do |format|
+        format.json {render 'show', status: :accepted}
+      end
+    else
+      respond_with @task do |format|
+        format.json {render @task.errors.messages, status: :unprocessable_entity}
+      end
+    end
+  end
+
+  protected
+
   def send_emails_about_task_changes
     send_task_change_notifications
     notify_assignees_of_task_responsibility_changes
@@ -50,17 +78,6 @@ class TasksController < ApplicationController
   def notify_assignees_of_task_responsibility_changes
     mail_assignment if assignee
     mail_assignment_removal(previous_assignee) if previous_assignee
-  end
-
-  def push_project_updates
-    return unless task_project_id_changed?
-
-    push_project_update(@old_project_id)
-    push_project_update(@task.project.id) if @task.project
-  end
-
-  def task_project_id_changed?
-    @old_project_id != (@task.project && @task.project.id)
   end
 
   def task_status_changed?
