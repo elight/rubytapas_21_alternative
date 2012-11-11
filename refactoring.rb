@@ -1,5 +1,5 @@
 class ClientProxy
-  attr_reader :task, :old_project_id
+  attr_reader :task, :old_task_project_id
 
   # Virtus could be handy to constrain what instance variables can be set
   def initialize(params = {})
@@ -8,7 +8,7 @@ class ClientProxy
     end
 
     if task
-      @old_project_id = task.project && task.project.id
+      @old_task_project_id = task.project && task.project.id
     end
   end
 
@@ -31,7 +31,7 @@ class ClientProxy
   def push_task_project_updates
     return unless task_project_id_changed?
 
-    push_project_update(old_project_id)
+    push_project_update(old_task_project_id)
     push_project_update(task.project.id) if task.project
   end
 
@@ -40,12 +40,12 @@ class ClientProxy
   end
 
   def task_project_id_changed?
-    old_project_id != (task.project && task.project.id)
+    old_task_project_id != (task.project && task.project.id)
   end
 end
 
 class EmailNotifier
-  attr_reader :task, :previous_task_status
+  attr_reader :task, :previous_task_status, :previous_task_assignee
 
   # Virtus could be handy to constrain what instance variables can be set
   def initialize(params = {})
@@ -70,7 +70,7 @@ class EmailNotifier
 
   def send_task_assignment_changes
     mail_assignment if assignee
-    mail_assignment_removal(previous_assignee) if previous_assignee
+    mail_assignment_removal(previous_task_assignee) if previous_task_assignee
   end
 
   def task_status_changed?
@@ -97,12 +97,17 @@ end
 class TasksController < ApplicationController
   def update
     previous_task_status = @task.status
+    old_project_id = @task.project && @task.project.id
 
     if @task.update_attributes(params[:task])
-      ClientProxy.new(:task => @task).push_task_updates
+      ClientProxy.new(
+        :task => @task,
+        :old_task_project_id => old_project_id
+      ).push_task_updates
       EmailNotifier.new(
         :task => @task,
-        :previous_task_status => previous_task_status
+        :previous_task_status => previous_task_status,
+        :previous_task_assignee => @task.assignee
       ).send_task_updates
 
       #respond_with defaults to a blank response, we need the object sent back so that the id can be read
